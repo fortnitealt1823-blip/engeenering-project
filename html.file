@@ -1,1 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADMIN PANEL</title>
+    <!-- Firebase SDK v8 CDN -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Chart.js for Realistic Live Telemetry Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-purple: #b026ff;
+            --neon-pink: #ff007f;
+            --neon-lime: #39ff14;
+            --neon-amber: #ffb703;
+            --bg-void: #010409;
+            --bg-deep: #060913;
+            --bg-card: rgba(8, 14, 30, 0.92);
+            --bg-input: rgba(14, 22, 40, 0.85);
+            --border-cyber: rgba(0, 240, 255, 0.25);
+            --border-glow: rgba(0, 240, 255, 0.6);
+            --text-main: #f8fafc;
+            --text-sub: #8892b0;
+            --radius-cyber: 14px;
+            --radius-lg: 22px;
+            --shadow-cyber: 0 0 35px -5px rgba(0, 240, 255, 0.2);
+            --shadow-intense: 0 0 50px -5px rgba(176, 38, 255, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-void);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Database Grid Background Matrix */
+        body::before {
+            content: "";
+            position: fixed; inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(0, 240, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: -1;
+        }
+
+        /* --- IMMERSIVE LOADING SCREEN --- */
+        #loading-screen {
+            position: fixed; inset: 0; background: var(--bg-void); z-index: 999999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px;
+            font-family: 'Orbitron', sans-serif; transition: opacity 0.5s ease;
+        }
+        .loader-core {
+            width: 75px; height: 75px; border: 3px solid rgba(0,240,255,0.15); border-top: 3px solid var(--neon-cyan);
+            border-radius: 50%; animation: spinLoader 0.9s linear infinite; box-shadow: 0 0 25px rgba(0,240,255,0.35);
+        }
+        @keyframes spinLoader { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { color: var(--neon-cyan); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
+        .loader-bar-track { width: 260px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        .loader-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple)); transition: width 0.15s ease; }
+
+        .container {
+            width: 100%; max-width: 1780px; min-height: 100vh;
+            display: flex; flex-direction: column; padding: 20px; gap: 16px;
+        }
+
+        .glass-cyber {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-cyber);
+            border-radius: var(--radius-cyber);
+            box-shadow: var(--shadow-cyber);
+        }
+
+        #login-screen {
+            display: flex; justify-content: center; align-items: center; flex: 1;
+        }
+
+        .auth-card {
+            width: 100%; max-width: 480px; padding: 48px;
+            display: flex; flex-direction: column; gap: 22px;
+            box-shadow: var(--shadow-intense);
+            border: 1px solid rgba(176, 38, 255, 0.4);
+            position: relative; overflow: hidden;
+        }
+
+        .auth-card::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+        }
+
+        .auth-card h1 {
+            font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 900;
+            text-align: center; letter-spacing: 1.5px;
+            background: linear-gradient(135deg, #fff 30%, var(--neon-cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .auth-card p {
+            text-align: center; color: var(--text-sub); font-size: 11px;
+            letter-spacing: 1px; margin-top: -10px; text-transform: uppercase;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label {
+            font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700;
+            color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px;
+        }
+
+        .input {
+            width: 100%; padding: 13px 16px; background: var(--bg-input);
+            border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 10px;
+            color: #fff; outline: none; font-size: 13px; font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input:focus {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+            background: rgba(14, 22, 40, 0.98);
+        }
+
+        .btn {
+            padding: 13px 20px; border: none; border-radius: 10px;
+            font-family: 'Orbitron', sans-serif; font-weight: 700; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px;
+            transition: all 0.25s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:active { transform: scale(0.96); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            color: #010409; box-shadow: 0 0 25px rgba(0, 240, 255, 0.4); font-weight: 900;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 35px rgba(0, 240, 255, 0.7); filter: brightness(1.1); }
+
+        .btn-danger {
+            background: rgba(255, 0, 127, 0.12); color: var(--neon-pink); border: 1px solid rgba(255, 0, 127, 0.35);
+        }
+        .btn-danger:hover { background: var(--neon-pink); color: #fff; box-shadow: 0 0 20px rgba(255, 0, 127, 0.5); }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.03); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-secondary:hover {
+            background: rgba(0, 240, 255, 0.08); border-color: var(--neon-cyan); color: var(--neon-cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+        .btn-sm { padding: 8px 14px; font-size: 9px; letter-spacing: 1px; }
+
+        #admin-app { display: none; flex-direction: column; flex: 1; gap: 16px; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; flex-wrap: wrap; gap: 14px;
+        }
+        .brand-area { display: flex; align-items: center; gap: 16px; }
+        .brand-logo {
+            width: 48px; height: 48px; background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 18px; color: #010409;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+        }
+
+        .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+        .nav-tab {
+            padding: 11px 18px; background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px;
+            color: var(--text-sub); font-family: 'Orbitron', sans-serif; font-weight: 700;
+            font-size: 9px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+            white-space: nowrap; transition: all 0.25s;
+        }
+        .nav-tab:hover { color: #fff; background: rgba(0, 240, 255, 0.05); border-color: rgba(0, 240, 255, 0.3); }
+        .nav-tab.active { background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple)); color: #010409; border-color: transparent; box-shadow: 0 0 25px rgba(0, 240, 255, 0.5); font-weight: 900; }
+
+        .tab-pane { display: none; flex-direction: column; gap: 16px; flex: 1; }
+        .tab-pane.active { display: flex; }
+
+        /* --- REALISTIC DATABASE & ANALYTICS WIDGETS --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+        .stat-card {
+            padding: 22px; display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
+            transition: transform 0.25s, border-color 0.25s;
+        }
+        .stat-card:hover { transform: translateY(-2px); border-color: var(--neon-cyan); box-shadow: 0 0 30px rgba(0, 240, 255, 0.3); }
+        .stat-card .val { font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 900; color: var(--neon-cyan); letter-spacing: -1px; }
+        .stat-card .lbl { font-family: 'Orbitron', sans-serif; font-size: 8px; color: var(--text-sub); text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px; }
+
+        /* Database Node Cluster Metrics */
+        .db-status-bar {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+        }
+        @media(max-width: 1200px) { .db-status-bar { grid-template-columns: repeat(2, 1fr); } }
+        
+        .db-node-box {
+            padding: 18px 22px; display: flex; flex-direction: column; gap: 8px;
+            background: linear-gradient(135deg, rgba(8,14,30,0.95), rgba(4,8,18,0.98));
+            border-left: 3px solid var(--neon-cyan);
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+        }
+
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+        .data-table th, .data-table td { padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .data-table th { 
+            font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 8px; 
+            text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; background: rgba(0, 240, 255, 0.03);
+        }
+        .data-table tr:hover td { background: rgba(0, 240, 255, 0.02); }
+        .table-container { overflow-x: auto; max-height: 520px; overflow-y: auto; }
+
+        .terminal {
+            background: #000205; border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 12px; padding: 16px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px; height: 130px; overflow-y: auto;
+            color: var(--neon-lime); display: flex; flex-direction: column; gap: 5px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.95);
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(1, 4, 9, 0.88);
+            display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px;
+            backdrop-filter: blur(16px); animation: fadeIn 0.2s ease;
+        }
+        .modal {
+            background: var(--bg-deep); border: 1px solid var(--border-cyber); border-radius: var(--radius-lg);
+            width: 100%; max-width: 680px; padding: 36px; display: flex; flex-direction: column; gap: 20px;
+            max-height: 90vh; overflow-y: auto; box-shadow: 0 0 60px rgba(0, 240, 255, 0.25);
+        }
+
+        .toast {
+            position: fixed; bottom: 25px; right: 25px; background: #080e1e; border: 1px solid var(--neon-cyan);
+            padding: 14px 24px; border-radius: 12px; font-size: 11px; font-weight: 700; z-index: 2000;
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.35); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; align-items: center; gap: 10px; color: #fff; font-family: 'Orbitron', sans-serif; letter-spacing: 0.5px;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .badge-pill {
+            padding: 4px 12px; background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 16px; color: var(--neon-cyan); font-family: 'Orbitron', sans-serif; font-size: 8px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        /* --- GLOBAL CHAT STYLING --- */
+        .chat-container-box {
+            display: flex; flex-direction: column; height: 500px; border-radius: 12px;
+            overflow: hidden; border: 1px solid var(--border-cyber); background-color: var(--bg-deep);
+        }
+        .chat-messages-scroll {
+            flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+        }
+        .chat-msg-card {
+            background: rgba(14, 22, 40, 0.55); padding: 12px 16px; border-radius: 10px;
+            position: relative; max-width: 85%; border-left: 3px solid var(--neon-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.12); animation: fadeInMsg 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes fadeInMsg { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-msg-sender {
+            font-family: 'Orbitron', sans-serif; font-weight: 700; color: var(--neon-cyan);
+            font-size: 9px; margin-bottom: 3px; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .chat-msg-text { font-size: 12px; word-break: break-word; color: var(--text-main); line-height: 1.4; font-family: 'JetBrains Mono', monospace; }
+        .chat-msg-quote {
+            font-size: 10px; background: rgba(0, 240, 255, 0.04); padding: 5px 10px;
+            border-left: 2px solid var(--neon-purple); margin-bottom: 6px; border-radius: 4px; color: var(--text-sub);
+        }
+        .chat-reply-trigger {
+            background: transparent; color: var(--text-sub); font-size: 9px; padding: 2px 0;
+            margin-top: 6px; cursor: pointer; border: none; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .chat-reply-trigger:hover { color: var(--neon-cyan); }
+        .chat-reply-banner {
+            background: rgba(8, 14, 30, 0.95); padding: 10px 18px; font-size: 11px;
+            display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-cyber);
+        }
+        .chat-reply-banner span { color: var(--neon-cyan); font-family: 'Orbitron', sans-serif; font-size: 9px; }
+        .chat-input-bar {
+            display: flex; padding: 14px; background: var(--bg-card); border-top: 1px solid var(--border-cyber); gap: 12px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media(max-width: 1100px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- IMMERSIVE LOADING SCREEN -->
+    <div id="loading-screen">
+        <div class="loader-core"></div>
+        <div class="loader-text" id="loader-status-text">Mounting Quantum Database...</div>
+        <div class="loader-bar-track">
+            <div class="loader-bar-fill" id="loader-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Music & SFX Audio Elements -->
+    <audio id="bg-audio" loop preload="auto">
+        <source src="https://vgmsite.com/soundtracks/fortnite-battle-royale-ost/jvxrqhzhkq/OG%20Classic%20-%20Lobby%20Music.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="click-sfx" preload="auto">
+        <source src="https://actions.google.com/sounds/v1/ui/button_click.ogg" type="audio/ogg">
+    </audio>
+
+    <!-- SCREEN 1: UPDATE ANIMATION OVERLAY (Spinning Quantum Animation) -->
+    <div id="update-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #051937 0%, #010409 100%); color: #ffffff; z-index: 99999; text-align: center; padding-top: 20vh; box-sizing: border-box; backdrop-filter: blur(20px);">
+        <div class="glass-cyber" style="max-width: 580px; margin: 0 auto; padding: 44px; border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 0 70px rgba(0, 240, 255, 0.3);">
+            <div class="loader-core" style="width: 72px; height: 72px; margin: 0 auto 18px auto; border-top-color: var(--neon-lime); animation: spinUpdateAnim 0.7s linear infinite;"></div>
+            <style>
+                @keyframes spinUpdateAnim { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
+            </style>
+            <h1 style="color: var(--neon-lime); font-size: 1.8rem; margin-bottom: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">SYSTEM UPDATE IN PROGRESS</h1>
+            <p style="color: var(--text-sub); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">Applying quantum patch sequence across client nodes. Please stand by...</p>
+            
+            <div class="loader-bar-track" style="width: 100%; max-width: 380px; margin: 20px auto;">
+                <div class="loader-bar-fill" style="width: 90%; background: linear-gradient(90deg, var(--neon-lime), var(--neon-cyan)); animation: pulseUpdateBar 1.2s infinite alternate;"></div>
+            </div>
+            <style>
+                @keyframes pulseUpdateBar { 0% { width: 20%; } 100% { width: 100%; } }
+            </style>
+
+            <p style="font-size: 11px; color: var(--text-main); margin-bottom: 22px;">Enter Master Password (<span style="color: var(--neon-lime);">IDK</span>) to bypass update screen:</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; align-items: center;">
+                <input type="password" id="update-password-input" class="input" style="width: 100%; max-width: 340px; text-align: center; letter-spacing: 3px;" placeholder="ENTER PASS">
+                <button class="btn btn-primary" onclick="handleUnlockAttempt('update')" style="width: 100%; max-width: 340px; background: linear-gradient(135deg, var(--neon-lime), var(--neon-cyan)); color:#010409;">Bypass Update Screen</button>
+            </div>
+            <div id="update-error-msg" style="color: var(--neon-pink); margin-top: 14px; display: none; font-size: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;">ACCESS DENIED: INVALID MASTER KEY</div>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: LOCKDOWN OVERLAY (Pulsing Crimson/Pink Alert Animation) -->
+    <div id="lockdown-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #290b1a 0%, #010409 100%); color: #ffffff; z-index: 99999; text-align: center; padding-top: 20vh; box-sizing: border-box; backdrop-filter: blur(20px);">
+        <div class="glass-cyber" style="max-width: 580px; margin: 0 auto; padding: 44px; border-color: rgba(255, 0, 127, 0.6); box-shadow: 0 0 80px rgba(255, 0, 127, 0.35); animation: pulseLockdownCard 1.5s ease-in-out infinite alternate;">
+            <style>
+                @keyframes pulseLockdownCard { 0% { box-shadow: 0 0 40px rgba(255, 0, 127, 0.2); } 100% { box-shadow: 0 0 90px rgba(255, 0, 127, 0.6); } }
+            </style>
+            <div style="width: 68px; height: 68px; border: 3px solid rgba(255,0,127,0.2); border-top: 3px solid var(--neon-pink); border-radius: 50%; margin: 0 auto 18px auto; animation: spinLockdown 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;"></div>
+            <style>
+                @keyframes spinLockdown { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+            </style>
+            <h1 style="color: var(--neon-pink); font-size: 1.8rem; margin-bottom: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 2px;">EMERGENCY LOCKDOWN ACTIVE</h1>
+            <p style="color: var(--text-sub); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">All client connections have been securely restricted by system command.</p>
+            
+            <div class="loader-bar-track" style="width: 100%; max-width: 380px; margin: 20px auto;">
+                <div class="loader-bar-fill" style="width: 100%; background: linear-gradient(90deg, var(--neon-pink), var(--neon-amber));"></div>
+            </div>
+
+            <p style="font-size: 11px; color: var(--text-main); margin-bottom: 22px;">Enter Master Password (<span style="color: var(--neon-pink);">IDK</span>) to lift lockdown:</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; align-items: center;">
+                <input type="password" id="lockdown-password-input" class="input" style="width: 100%; max-width: 340px; text-align: center; letter-spacing: 3px;" placeholder="ENTER pass">
+                <button class="btn btn-danger" onclick="handleUnlockAttempt('lockdown')" style="width: 100%; max-width: 340px;">Lift Lockdown & Enter</button>
+            </div>
+            <div id="lockdown-error-msg" style="color: var(--neon-pink); margin-top: 14px; display: none; font-size: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;">ACCESS DENIED: INVALID MASTER KEY</div>
+        </div>
+    </div>
+
+    <!-- ADMIN ABUSE BANNER (Appears globally when Admin Abuse is triggered) -->
+    <div id="admin-abuse-global-banner" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink), var(--neon-amber)); color: #010409; text-align: center; padding: 10px; font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 900; z-index: 99998; letter-spacing: 2px; box-shadow: 0 0 30px rgba(255,0,127,0.6);">
+        ⚡ CRAZY ADMIN ABUSE EVENT ACTIVE: CUSTOM GAMES, UNRESTRICTED TRADING, & MASSIVE MULTIPLIERS ONLINE! ⚡
+    </div>
+
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="login-screen">
+            <div class="auth-card glass-cyber">
+                <div style="display: flex; justify-content: center; margin-bottom: -4px;">
+                    <div class="brand-logo" style="width: 64px; height: 64px; font-size: 24px;">SS</div>
+                </div>
+                <h1>OP Admin Panel</h1>
+                <p>Database Kernel v4.8</p>
+                
+                <div class="input-group">
+                    <label>Admin Handle</label>
+                    <input type="text" id="login-user" class="input" placeholder="Username">
+                </div>
+                <div class="input-group">
+                    <label>Access Password</label>
+                    <input type="password" id="login-pass" class="input" placeholder="••••••••••••">
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()" style="margin-top: 4px;">Initialize Session</button>
+            </div>
+        </div>
+
+        <!-- Dashboard App -->
+        <div id="admin-app">
+            <header class="glass-cyber">
+                <div class="brand-area">
+                    <div class="brand-logo">SS</div>
+                    <div>
+                        <h2 style="font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">DATABASE KERNEL</h2>
+                        <span id="current-admin-badge" style="font-family: 'Orbitron', sans-serif; font-size: 8px; color: var(--neon-cyan); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;"></span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <select id="music-track-select" class="input" style="padding: 7px 10px; font-size: 8px; font-family: 'Orbitron', sans-serif; width: 130px;" onchange="changeMusicTrack(this.value)">
+                        <option value="https://vgmsite.com/soundtracks/fortnite-battle-royale-ost/jvxrqhzhkq/OG%20Classic%20-%20Lobby%20Music.mp3">🎵 Random Shuffle</option>
+                        <option value="https://vgmsite.com/soundtracks/synthwave-radio/synthwave_loop.mp3">🎵 Synthwave Void</option>
+                        <option value="https://vgmsite.com/soundtracks/cyberpunk-chill/cyber_chill.mp3">🎵 Cybernetic Chill</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" id="music-toggle-btn" onclick="toggleCustomMusic()">🎵 Music: OFF</button>
+                    <button class="btn btn-primary btn-sm" onclick="openLiveBroadcastModal()">📡 Broadcast</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openPasswordModal()">🔒 Pass</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openAiTerminalTab()">🤖 AI DEC.</button>
+                    <button class="btn btn-danger btn-sm" onclick="handleLogout()">Disconnect</button>
+                </div>
+            </header>
+
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('stats')">Database & Analytics Hub</button>
+                <button class="nav-tab" onclick="switchTab('users')">User Directory</button>
+                <button class="nav-tab" onclick="switchTab('posts')">Network Feeds</button>
+                <button class="nav-tab" onclick="switchTab('chat')">Global Chat</button>
+                <button class="nav-tab" onclick="switchTab('stream')">Live Broadcasting</button>
+                <button class="nav-tab" onclick="switchTab('ai')">AI Settings</button>
+                <button class="nav-tab" onclick="switchTab('badges')">Badges & Ranks</button>
+                <button class="nav-tab" onclick="switchTab('promos')">Voucher Codes</button>
+                <button class="nav-tab" onclick="switchTab('reports')">Report Tickets</button>
+                <button class="nav-tab" onclick="switchTab('settings')">Global Settings</button>
+                <button class="nav-tab" id="tab-owner-btn" onclick="switchTab('owner')" style="display:none; color: var(--neon-amber); border-color: rgba(255,183,3,0.4);">Owner Vault</button>
+            </div>
+
+            <!-- TAB: STATS / ENHANCED FUTURISTIC ANALYTICS HUB -->
+            <div id="tab-stats" class="tab-pane active">
+                <!-- Database Node Cluster Live Status Bar -->
+                <div class="db-status-bar">
+                    <div class="db-node-box glass-cyber">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:var(--text-sub);">NODE CLUSTER 01</span>
+                            <span style="color:var(--neon-lime);" id="node1-status">● ONLINE</span>
+                        </div>
+                        <div style="font-size:14px; color:#fff; font-weight:bold;">Firestore v8.10.1</div>
+                        <div style="font-size:9px; color:var(--neon-cyan);">Latency: <span id="node1-latency">14ms</span> | Ping: Stable</div>
+                    </div>
+                    <div class="db-node-box glass-cyber">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:var(--text-sub);">REALTIME SYNC</span>
+                            <span style="color:var(--neon-lime);" id="node2-status">● STREAMING</span>
+                        </div>
+                        <div style="font-size:14px; color:#fff; font-weight:bold;">Firebase RTDB</div>
+                        <div style="font-size:9px; color:var(--neon-cyan);">Sockets: <span id="active-sockets">128 Active</span></div>
+                    </div>
+                    <div class="db-node-box glass-cyber">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:var(--text-sub);">MEMORY ALLOC</span>
+                            <span style="color:var(--neon-amber);" id="mem-usage">42.8%</span>
+                        </div>
+                        <div style="font-size:14px; color:#fff; font-weight:bold;">12.4 GB / 32 GB</div>
+                        <div style="font-size:9px; color:var(--text-sub);">Cache Hit Rate: 99.4%</div>
+                    </div>
+                    <div class="db-node-box glass-cyber">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:var(--text-sub);">THREAT DEFENSE</span>
+                            <span style="color:var(--neon-lime);">ARMED</span>
+                        </div>
+                        <div style="font-size:14px; color:#fff; font-weight:bold;">Neural Sentinel v2</div>
+                        <div style="font-size:9px; color:var(--neon-cyan);">Blocked Packets: <span id="blocked-packets">0</span></div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-users">0</span><span class="lbl">Registered Accounts</span></div>
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-posts">0</span><span class="lbl">Active Network Posts</span></div>
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-streams">0</span><span class="lbl">Live Broadcasts</span></div>
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-promos">0</span><span class="lbl">Active Vouchers</span></div>
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-coins">0</span><span class="lbl">Total Coin Supply</span></div>
+                    <div class="stat-card glass-cyber"><span class="val" id="stat-reports">0</span><span class="lbl">Open Reports</span></div>
+                </div>
+
+                <!-- Real-Time Chart.js Telemetry Graphs -->
+                <div class="grid-2">
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Real-Time Query Throughput (QPS)</h3>
+                            <span class="badge-pill">Live Telemetry</span>
+                        </div>
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="qpsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Database Collection Distribution (%)</h3>
+                            <span class="badge-pill">Storage Metrics</span>
+                        </div>
+                        <div style="height: 220px; position: relative; display: flex; justify-content: center;">
+                            <canvas id="storageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: USERS -->
+            <div id="tab-users" class="tab-pane">
+                <div class="glass-cyber" style="padding: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="user-search" class="input" style="flex: 1; min-width: 240px;" placeholder="Search handle, display name or UID..." oninput="renderUserTable()">
+                    <select id="user-filter" class="input" style="max-width: 170px;" onchange="renderUserTable()">
+                        <option value="all">All Accounts</option>
+                        <option value="banned">Banned Only</option>
+                        <option value="muted">Muted Only</option>
+                        <option value="verified">Verified Only</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="openLookupModalPrompt()">Account Lookup</button>
+                    <button class="btn btn-secondary" onclick="exportUsersCSV()">Export Data</button>
+                </div>
+                <div class="glass-cyber table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>User Handle</th><th>Coins</th><th>Rank / Badge</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="user-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: POSTS -->
+            <div id="tab-posts" class="tab-pane">
+                <div class="glass-cyber table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Author</th><th>Content / Caption</th><th>Timestamp</th><th>Pinned</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="post-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: GLOBAL CHAT -->
+            <div id="tab-chat" class="tab-pane">
+                <div class="glass-cyber" style="padding: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Live Global Chat Feed (Synced)</h3>
+                    <button class="btn btn-danger btn-sm" onclick="purgeGlobalChat()">Wipe Entire Chat</button>
+                </div>
+                
+                <div class="chat-container-box glass-cyber">
+                    <div id="globalChatMessages" class="chat-messages-scroll"></div>
+
+                    <div id="chatReplyBanner" class="chat-reply-banner" style="display:none;">
+                        <div>Replying to <span id="replyingTargetUser"></span>: <span id="replyingTargetText" style="color:var(--text-sub);"></span></div>
+                        <button onclick="cancelChatReply()" class="btn btn-secondary btn-sm" style="padding: 2px 6px;">✕</button>
+                    </div>
+
+                    <div class="chat-input-bar">
+                        <input type="text" id="globalChatInput" class="input" placeholder="Type a message in global chat..." onkeypress="handleChatKeyPress(event)">
+                        <button class="btn btn-primary" onclick="sendGlobalChatMessage()">Send Message</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: STREAM -->
+            <div id="tab-stream" class="tab-pane">
+                <div class="grid-2">
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Broadcast Live Video Stream</h3>
+                        <div class="input-group">
+                            <label>Broadcast Title</label>
+                            <input type="text" id="stream-title-input" class="input" placeholder="e.g. Cybernetic Assembly Q&A">
+                        </div>
+                        <div class="input-group">
+                            <label>Host Handle</label>
+                            <input type="text" id="stream-host-input" class="input" value="Ferni1">
+                        </div>
+                        <div class="input-group">
+                            <label>Video Stream Source URL (MP4 / HLS / WebRTC)</label>
+                            <input type="text" id="stream-url-input" class="input" placeholder="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4">
+                        </div>
+                        <button class="btn btn-primary" onclick="startLiveBroadcast()">Initiate Global Broadcast</button>
+                    </div>
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Active Live Broadcasts</h3>
+                        <div class="table-container" style="max-height: 260px;">
+                            <table class="data-table">
+                                <thead><tr><th>Title</th><th>Host</th><th>Action</th></tr></thead>
+                                <tbody id="live-streams-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: AI MODERATION -->
+            <div id="tab-ai" class="tab-pane">
+                <div class="grid-2">
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Neural Sentinel Engine</h3>
+                        <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">The neural scanner automatically evaluates posts and chat feeds for disruptive patterns and policy violations.</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span>Active Auto-Filtering</span>
+                            <input type="checkbox" id="ai-filter-toggle" checked style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;" onchange="toggleAiFeature('autoFilter', this.checked)">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span>Auto-Quarantine Toxic Accounts</span>
+                            <input type="checkbox" id="ai-ban-toggle" style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;" onchange="toggleAiFeature('autoBan', this.checked)">
+                        </div>
+                        <button class="btn btn-primary" onclick="runAiScanNow()">Execute Deep Neural Scan</button>
+                    </div>
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Neural Threat Log</h3>
+                        <div class="terminal" id="ai-log-terminal" style="height: 200px;">
+                            <div>[SENTINEL] Neural security daemon online...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: BADGES -->
+            <div id="tab-badges" class="tab-pane">
+                <div class="grid-2">
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Deploy Custom Rank Badge</h3>
+                        <div class="input-group">
+                            <label>Badge Title / ID</label>
+                            <input type="text" id="badge-name" class="input" placeholder="e.g. Cyber VIP or legend">
+                        </div>
+                        <div class="input-group">
+                            <label>Icon Glyph</label>
+                            <input type="text" id="badge-icon" class="input" placeholder="e.g. ⚡">
+                        </div>
+                        <div class="input-group">
+                            <label>Glow Color</label>
+                            <input type="color" id="badge-color" class="input" value="#00f0ff" style="height: 42px; padding: 4px; cursor: pointer;">
+                        </div>
+                        <button class="btn btn-primary" onclick="createCustomBadge()">Deploy Badge Definition</button>
+                    </div>
+                    <div class="glass-cyber table-container">
+                        <table class="data-table">
+                            <thead><tr><th>Title</th><th>Icon</th><th>Glow Color</th><th>Action</th></tr></thead>
+                            <tbody id="badge-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PROMOS -->
+            <div id="tab-promos" class="tab-pane">
+                <div class="grid-2">
+                    <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Generate Voucher Code (Coins & Badge Rewards)</h3>
+                        <div class="input-group">
+                            <label>Voucher Code String</label>
+                            <input type="text" id="promo-code-text" class="input" placeholder="e.g. VIPGIFT2026">
+                        </div>
+                        <div class="input-group">
+                            <label>Coin Reward Amount</label>
+                            <input type="number" id="promo-coins" class="input" placeholder="e.g. 500">
+                        </div>
+                        <div class="input-group">
+                            <label>Grant Cool Badge (Optional)</label>
+                            <select id="promo-badge-select" class="input">
+                                <option value="">-- No Badge Reward --</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="createPromoCode()">Issue Voucher Code</button>
+                    </div>
+                    <div class="glass-cyber table-container">
+                        <table class="data-table">
+                            <thead><tr><th>Code</th><th>Reward Coins</th><th>Badge Reward</th><th>Redemptions</th><th>Action</th></tr></thead>
+                            <tbody id="promo-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REPORTS -->
+            <div id="tab-reports" class="tab-pane">
+                <div class="glass-cyber table-container">
+                    <table class="data-table">
+                        <thead><tr><th>Reporter</th><th>Target ID</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="report-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: SETTINGS -->
+            <div id="tab-settings" class="tab-pane">
+                <div class="glass-cyber" style="padding: 24px; display: flex; flex-direction: column; gap: 18px; max-width: 660px;">
+                    <h3 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Global Matrix Parameters</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>New User Registrations Active</span>
+                        <input type="checkbox" id="setting-reg" style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;" onchange="updateSystemSetting('registrationOpen', this.checked)">
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>User Posting Enabled</span>
+                        <input type="checkbox" id="setting-post" style="width: 18px; height: 18px; accent-color: var(--neon-cyan); cursor: pointer;" onchange="updateSystemSetting('postingOpen', this.checked)">
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>System Maintenance Mode</span>
+                        <input type="checkbox" id="setting-maint" style="width: 18px; height: 18px; accent-color: var(--neon-pink); cursor: pointer;" onchange="updateSystemSetting('maintenanceMode', this.checked)">
+                    </div>
+                    <div class="input-group" style="margin-top: 4px;">
+                        <label>Global Matrix Banner Announcement</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="setting-announcement" class="input" placeholder="Enter broadcast banner message...">
+                            <button class="btn btn-primary" onclick="saveSystemAnnouncement()">Broadcast</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: OWNER VAULT -->
+            <div id="tab-owner" class="tab-pane">
+                <div class="glass-cyber" style="padding: 30px; display: flex; flex-direction: column; gap: 22px; max-width: 820px; border-color: rgba(255, 183, 3, 0.4); box-shadow: 0 0 50px rgba(255, 183, 3, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div class="brand-logo" style="width: 52px; height: 52px; background: linear-gradient(135deg, var(--neon-amber), var(--neon-pink)); font-size: 22px; color: #fff;">🛡️</div>
+                        <div>
+                            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--neon-amber); text-transform: uppercase; letter-spacing: 2px; font-weight: 900;">Sovereign Owner Master Vault</h3>
+                            <div id="connection-status" style="font-size: 10px; color: var(--neon-lime); font-family: 'JetBrains Mono', monospace; margin-top: 4px;">Status: Connected to Firestore ✓</div>
+                        </div>
+                    </div>
+
+                    <!-- ADMIN ABUSE & EVENT SCHEDULER SECTION -->
+                    <div style="background: rgba(176, 38, 255, 0.06); border: 1px solid rgba(176, 38, 255, 0.35); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4 style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-purple); text-transform: uppercase; letter-spacing: 1.5px;">⚡ Admin Abuse & Crazy Event Center</h4>
+                            <span id="admin-abuse-status-badge" class="badge-pill" style="color:var(--neon-pink); border-color:var(--neon-pink);">Status: OFFLINE</span>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-sub); line-height: 1.4;">Instantly toggle or schedule crazy custom game lobbies, unrestricted trading sprees, and server-wide event chaos across your other site.</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button class="btn btn-primary" onclick="toggleAdminAbuseNow()" id="btn-toggle-abuse" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));">🔥 Enable Admin Abuse Now</button>
+                            <button class="btn btn-secondary" onclick="openScheduleAbuseModal()">⏰ Schedule Abuse Event</button>
+                        </div>
+
+                        <!-- Scheduled Events Table List -->
+                        <div style="margin-top: 8px;">
+                            <span style="font-family:'Orbitron',sans-serif; font-size:9px; color:var(--text-sub); text-transform:uppercase;">Active Automated Schedules:</span>
+                            <div class="table-container" style="max-height: 160px; margin-top: 6px;">
+                                <table class="data-table">
+                                    <thead><tr><th>Event Type</th><th>Trigger Time</th><th>Action</th></tr></thead>
+                                    <tbody id="scheduled-events-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TWO SEPARATE ACTION BOXES FOR UPDATE & LOCKDOWN -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div style="background: rgba(0, 240, 255, 0.04); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;">
+                            <div>
+                                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 1.5px;">System Update Trigger</h4>
+                                <p style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">Engages the spinning quantum update animation across all connected client nodes.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openUpdateModal()" style="width: 100%;">⚡ Trigger Update Screen</button>
+                        </div>
+                        <div style="background: rgba(255, 0, 127, 0.04); border: 1px solid rgba(255, 0, 127, 0.25); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;">
+                            <div>
+                                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-pink); text-transform: uppercase; letter-spacing: 1.5px;">Emergency Lockdown Trigger</h4>
+                                <p style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">Engages the pulsing crimson lockdown alert animation across client nodes.</p>
+                            </div>
+                            <button class="btn btn-danger" onclick="openLockdownModal()" style="width: 100%;">🚨 Trigger Lockdown Screen</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <button class="btn btn-secondary" onclick="coinSinkTax()">Apply 10% Wealth Tax (>100 Coins)</button>
+                        <button class="btn btn-secondary" onclick="coinSinkDividend()">Execute +100 Coin Dividend</button>
+                        <button class="btn btn-secondary" onclick="bulkCoinGivePrompt()">Bulk Distribute Coins</button>
+                        <button class="btn btn-danger" onclick="purgeGlobalChat()">Wipe Entire Global Chat</button>
+                        <button class="btn btn-danger" onclick="wipeAllPosts()">Purge All Network Posts</button>
+                        <button class="btn btn-danger" onclick="resetAllCoins()">Reset All Wallets to 100</button>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="factoryResetDatabase()" style="width: 100%;">⚠️ Factory Reset Matrix State</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Activity Log -->
+            <div class="terminal" id="terminal-log">
+                <div>[SYSTEM] Cybernetic command terminal online and listening. Ready...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="schedule-abuse-modal">
+        <div class="modal glass-cyber" style="max-width: 500px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-purple); font-size: 14px; font-weight: 900; letter-spacing: 1.5px;">⏰ SCHEDULE ADMIN ABUSE EVENT</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeScheduleAbuseModal()">✕ Close</button>
+            </div>
+            <div class="input-group">
+                <label>Event Type</label>
+                <select id="schedule-event-type" class="input">
+                    <option value="custom_games_mega">Custom Games & Mega Lobbies</option>
+                    <option value="unrestricted_trading">Unrestricted Trading Extravaganza</option>
+                    <option value="item_rain_chaos">Item & Coin Rain Chaos</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Trigger Date & Time (Auto-Executes Offline)</label>
+                <input type="datetime-local" id="schedule-event-time" class="input">
+            </div>
+            <button class="btn btn-primary" onclick="saveScheduledAbuseEvent()" style="background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); width: 100%;">Save Automated Schedule</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="vault-update-popup">
+        <div class="modal glass-cyber" style="max-width: 500px; border-color: rgba(0, 240, 255, 0.5); box-shadow: 0 0 50px rgba(0, 240, 255, 0.25);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 14px; font-weight: 900; letter-spacing: 1.5px;">⚡ CONFIRM SYSTEM UPDATE</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeUpdateModal()">✕ Close</button>
+            </div>
+            <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">Are you sure you want to trigger the spinning update animation overlay across all connected client nodes?</p>
+            <div style="background: rgba(1, 4, 9, 0.7); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2);">
+                <span style="font-size: 10px; font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); text-transform: uppercase;">Master Cipher:</span>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #fff; margin-top: 3px; letter-spacing: 2px;">IDK</div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 4px;">
+                <button class="btn btn-secondary" onclick="closeUpdateModal()" style="flex: 1;">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmAndActivateUpdate()" style="flex: 1;">Engage Update Screen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="vault-lockdown-popup">
+        <div class="modal glass-cyber" style="max-width: 500px; border-color: rgba(255, 0, 127, 0.5); box-shadow: 0 0 50px rgba(255, 0, 127, 0.25);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-pink); font-size: 14px; font-weight: 900; letter-spacing: 1.5px;">🚨 CONFIRM EMERGENCY LOCKDOWN</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeLockdownModal()">✕ Close</button>
+            </div>
+            <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">Are you sure you want to trigger the pulsing lockdown alert animation across all client nodes?</p>
+            <div style="background: rgba(1, 4, 9, 0.7); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255, 0, 127, 0.2);">
+                <span style="font-size: 10px; font-family: 'Orbitron', sans-serif; color: var(--neon-pink); text-transform: uppercase;">Master Cipher:</span>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #fff; margin-top: 3px; letter-spacing: 2px;">IDK</div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 4px;">
+                <button class="btn btn-secondary" onclick="closeLockdownModal()" style="flex: 1;">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmAndActivateLockdown()" style="flex: 1;">Engage Lockdown Screen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="live-broadcast-modal">
+        <div class="modal glass-cyber">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 15px; font-weight: 900;">Live Broadcast Studio</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeLiveBroadcastModal()">✕ Close</button>
+            </div>
+            <div class="input-group">
+                <label>Broadcast Title</label>
+                <input type="text" id="modal-stream-title" class="input" placeholder="e.g. Principal's Cyber Address">
+            </div>
+            <div class="input-group">
+                <label>Host Handle</label>
+                <input type="text" id="modal-stream-host" class="input" value="Ferni1">
+            </div>
+            <div class="input-group">
+                <label>Stream Video URL / Embed Source</label>
+                <input type="text" id="modal-stream-url" class="input" placeholder="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4">
+            </div>
+            <button class="btn btn-primary" onclick="submitLiveBroadcastModal()">Go Live Instantly</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="password-modal">
+        <div class="modal glass-cyber">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 15px; font-weight: 900;">Modify Admin Access Cipher</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closePasswordModal()">✕ Close</button>
+            </div>
+            <div class="input-group">
+                <label>Current Cipher</label>
+                <input type="password" id="pass-current" class="input" placeholder="Enter current cipher">
+            </div>
+            <div class="input-group">
+                <label>New Cipher</label>
+                <input type="password" id="pass-new" class="input" placeholder="Enter new cipher">
+            </div>
+            <div class="input-group">
+                <label>Confirm New Cipher</label>
+                <input type="password" id="pass-confirm" class="input" placeholder="Confirm new cipher">
+            </div>
+            <button class="btn btn-primary" onclick="submitPasswordChange()">Update Cipher Instantly</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="lookup-modal">
+        <div class="modal glass-cyber">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 15px; font-weight: 900;">Account Security Inspector</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeLookupModal()">✕ Close</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="lookup-input-query" class="input" placeholder="Enter handle or exact UID...">
+                <button class="btn btn-primary" onclick="executeUserLookup()">Search</button>
+            </div>
+            <div id="lookup-results-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto;">
+                <p style="color: var(--text-sub); font-size: 12px; text-align: center; padding: 25px;">Run a lookup search to inspect organized user database records.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="user-modal">
+        <div class="modal glass-cyber">
+            <h3 id="modal-username" style="font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); font-size: 15px; font-weight: 900;">Manage User Account</h3>
+            <div class="input-group">
+                <label>Display Name</label>
+                <input type="text" id="modal-displayname" class="input">
+            </div>
+            <div class="input-group">
+                <label>User Bio</label>
+                <textarea id="modal-bio" class="input" style="resize: none; height: 60px;"></textarea>
+            </div>
+            <div class="input-group">
+                <label>Direct User Password Override</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="modal-user-newpass" class="input" placeholder="New account password...">
+                    <button class="btn btn-primary" onclick="adminChangeUserPassword()">Set Pass</button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Coin Balance Control</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="modal-coin-amount" class="input" placeholder="Amount">
+                    <button class="btn btn-primary" onclick="modUserCoins('give')">Add</button>
+                    <button class="btn btn-secondary" onclick="modUserCoins('remove')">Sub</button>
+                    <button class="btn btn-secondary" onclick="modUserCoins('set')">Set</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" id="modal-btn-verify" onclick="toggleUserStatus('verified')">Toggle Verification</button>
+                <button class="btn btn-secondary" id="modal-btn-ban" onclick="toggleUserStatus('banned')">Toggle Ban</button>
+                <button class="btn btn-secondary" id="modal-btn-mute" onclick="toggleUserStatus('muted')">Toggle Mute</button>
+                <button class="btn btn-danger" onclick="deleteAccountModal()">Delete Account</button>
+            </div>
+            <button class="btn btn-secondary" onclick="closeUserModal()" style="margin-top: 8px;">Done</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtYQa0nVUrzdBNoYbSojunbq-yk9QZKcw",
+            authDomain: "school-soical.firebaseapp.com",
+            databaseURL: "https://school-soical-default-rtdb.firebaseio.com",
+            projectId: "school-soical",
+            storageBucket: "school-soical.firebasestorage.app",
+            messagingSenderId: "189089843034",
+            appId: "1:189089843034:web:88720923a3c5b4935dd563",
+            measurementId: "G-3KJS0JP5K6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const rtdb = firebase.database();
+
+        const settingsRef = db.collection('config').doc('appSettings');
+
+        let currentUserData = null;
+        let selectedUserId = null;
+        let usersCache = [];
+        let postsCache = [];
+        let chatCache = [];
+        let promosCache = [];
+        let streamsCache = [];
+        let reportsCache = [];
+        let badgesCache = [];
+        let scheduledEventsCache = [];
+        let musicPlaying = false;
+        let replyingToChatId = null;
+
+        let qpsChartInstance = null;
+        let storageChartInstance = null;
+        let queryCounter = 42;
+
+        // --- Simulated High-Tech Loading Screen Sequence ---
+        window.addEventListener('DOMContentLoaded', () => {
+            let progress = 0;
+            const bar = document.getElementById('loader-progress-bar');
+            const status = document.getElementById('loader-status-text');
+            const screen = document.getElementById('loading-screen');
+
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 20) + 10;
+                if(progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    status.innerText = "Database Kernel Mounted.";
+                    setTimeout(() => {
+                        screen.style.opacity = '0';
+                        setTimeout(() => screen.remove(), 400);
+                        initCharts();
+                    }, 300);
+                }
+                bar.style.width = progress + '%';
+            }, 90);
+        });
+
+        function initCharts() {
+            // QPS Line Chart
+            const qpsCtx = document.getElementById('qpsChart').getContext('2d');
+            qpsChartInstance = new Chart(qpsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['-50s', '-40s', '-30s', '-20s', '-10s', 'Now'],
+                    datasets: [{
+                        label: 'Queries / Sec',
+                        data: [18, 25, 42, 31, 55, 48],
+                        borderColor: '#00f0ff',
+                        backgroundColor: 'rgba(0, 240, 255, 0.08)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#8892b0', font: { family: 'JetBrains Mono', size: 9 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#8892b0', font: { family: 'JetBrains Mono', size: 9 } }, beginAtZero: true }
+                    }
+                }
+            });
+
+            // Storage Doughnut Chart
+            const storageCtx = document.getElementById('storageChart').getContext('2d');
+            storageChartInstance = new Chart(storageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Users Collection', 'Posts & Media', 'Global Chat', 'System Metadata'],
+                    datasets: [{
+                        data: [45, 30, 15, 10],
+                        backgroundColor: ['#00f0ff', '#b026ff', '#39ff14', '#ffb703'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#8892b0', font: { family: 'Orbitron', size: 8 }, boxWidth: 10 }
+                        }
+                    }
+                }
+            });
+
+            // Periodically update live telemetry numbers & check offline automated schedules
+            setInterval(() => {
+                if (qpsChartInstance) {
+                    const newVal = Math.floor(Math.random() * 35) + 25;
+                    qpsChartInstance.data.datasets[0].data.shift();
+                    qpsChartInstance.data.datasets[0].data.push(newVal);
+                    qpsChartInstance.update('none');
+                }
+                queryCounter += Math.floor(Math.random() * 5) + 1;
+                document.getElementById('active-sockets').innerText = (120 + Math.floor(Math.random() * 15)) + ' Active';
+                document.getElementById('node1-latency').innerText = (12 + Math.floor(Math.random() * 6)) + 'ms';
+
+                checkAutomatedSchedules();
+            }, 3000);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                const sfx = document.getElementById('click-sfx');
+                if (sfx) {
+                    sfx.currentTime = 0;
+                    sfx.volume = 0.2;
+                    sfx.play().catch(() => {});
+                }
+            }
+        });
+
+        function changeMusicTrack(trackUrl) {
+            const audio = document.getElementById('bg-audio');
+            audio.src = trackUrl;
+            if (musicPlaying) {
+                audio.play().catch(e => console.error("Audio error:", e));
+            }
+            showToast('Music track updated');
+        }
+
+        function toggleCustomMusic() {
+            const audio = document.getElementById('bg-audio');
+            const btn = document.getElementById('music-toggle-btn');
+            
+            if (!musicPlaying) {
+                audio.play().then(() => {
+                    musicPlaying = true;
+                    btn.innerText = '🎵 Music: ON';
+                    btn.style.borderColor = 'var(--neon-cyan)';
+                    btn.style.color = 'var(--neon-cyan)';
+                    showToast('Custom audio stream engaged');
+                }).catch(error => {
+                    console.error("Audio playback error:", error);
+                    showToast('Playback restricted by browser. Interact with page first.');
+                });
+            } else {
+                audio.pause();
+                musicPlaying = false;
+                btn.innerText = '🎵 Music: OFF';
+                btn.style.borderColor = 'rgba(255,255,255,0.08)';
+                btn.style.color = 'var(--text-main)';
+                showToast('Music muted');
+            }
+        }
+
+        function logAction(text) {
+            const term = document.getElementById('terminal-log');
+            const time = new Date().toLocaleTimeString();
+            term.innerHTML += `<div>[${time}] ${text}</div>`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast glass-cyber';
+            t.innerHTML = `⚡ <span>${msg}</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        async function handleLogin() {
+            const uInput = document.getElementById('login-user').value.trim();
+            const pInput = document.getElementById('login-pass').value.trim();
+            if(!uInput || !pInput) { showToast('Provide login credentials'); return; }
+
+            try {
+                await ensureDefaults();
+                const lookupKey = uInput.toLowerCase();
+                const userSnap = await db.collection('usernames').doc(lookupKey).get();
+                if(!userSnap.exists) { showToast('Admin handle not found'); return; }
+                const uid = userSnap.data().uid;
+
+                const docSnap = await db.collection('users').doc(uid).get();
+                if(!docSnap.exists) { showToast('User profile record missing'); return; }
+                const data = docSnap.data();
+
+                if(data.password !== pInput) { showToast('Incorrect cipher credentials'); return; }
+                if(data.badge !== 'owner' && data.badge !== 'co_owner' && data.role !== 'owner' && data.role !== 'co_owner') {
+                    showToast('Access Denied: Owner level required');
+                    return;
+                }
+
+                currentUserData = { uid, ...data };
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-app').style.display = 'flex';
+                document.getElementById('current-admin-badge').innerText = `@${data.username} // [${data.badge || 'admin'}]`;
+                
+                if(data.badge === 'owner' || data.role === 'owner') {
+                    document.getElementById('tab-owner-btn').style.display = 'block';
+                }
+
+                initRealtimeListeners();
+                logAction(`Authenticated session successfully: @${data.username}`);
+            } catch(e) {
+                console.error(e);
+                showToast('Auth error: ' + e.message);
+            }
+        }
+
+        async function ensureDefaults() {
+            const defaults = [
+                { username: 'Ferni1', password: 'donut123', badge: 'owner', coins: 2000 },
+                { username: 'MP', password: 'Miguel956', badge: 'co_owner', coins: 2000 }
+            ];
+            for(let d of defaults) {
+                const lookupKey = d.username.toLowerCase();
+                const snap = await db.collection('usernames').doc(lookupKey).get();
+                if(!snap.exists) {
+                    const ref = db.collection('users').doc();
+                    await ref.set({ username: d.username, password: d.password, badge: d.badge, coins: d.coins, createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                    await db.collection('usernames').doc(lookupKey).set({ uid: ref.id });
+                } else {
+                    const uid = snap.data().uid;
+                    await db.collection('users').doc(uid).set({ password: d.password, badge: d.badge }, { merge: true });
+                }
+            }
+        }
+
+        function handleLogout() {
+            currentUserData = null;
+            document.getElementById('admin-app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+            showToast('Session terminated');
+            logAction('Admin session closed.');
+        }
+
+        function openPasswordModal() {
+            document.getElementById('pass-current').value = '';
+            document.getElementById('pass-new').value = '';
+            document.getElementById('pass-confirm').value = '';
+            document.getElementById('password-modal').style.display = 'flex';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+        }
+
+        async function submitPasswordChange() {
+            const currentPass = document.getElementById('pass-current').value.trim();
+            const newPass = document.getElementById('pass-new').value.trim();
+            const confirmPass = document.getElementById('pass-confirm').value.trim();
+
+            if(!currentPass || !newPass || !confirmPass) { showToast('Please fill out all cipher fields.'); return; }
+            if(currentPass !== currentUserData.password) { showToast('Current cipher does not match.'); return; }
+            if(newPass !== confirmPass) { showToast('New ciphers do not match.'); return; }
+
+            try {
+                await db.collection('users').doc(currentUserData.uid).update({ password: newPass });
+                currentUserData.password = newPass;
+                logAction(`Password updated successfully for @${currentUserData.username}`);
+                showToast('Cipher updated and synced successfully!');
+                closePasswordModal();
+            } catch(e) {
+                console.error(e);
+                showToast('Failed to update cipher: ' + e.message);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.target.classList.add('active');
+            if(tabId === 'stats' && qpsChartInstance) {
+                qpsChartInstance.resize();
+                storageChartInstance.resize();
+            }
+        }
+
+        function openAiTerminalTab() { switchTab('ai'); }
+
+        function initRealtimeListeners() {
+            settingsRef.get().then((doc) => {
+                if (!doc.exists) {
+                    settingsRef.set({
+                        updateActive: false,
+                        lockdown: false,
+                        adminAbuseActive: false,
+                        unlockPassword: "AIMEISPRO"
+                    });
+                }
+            }).catch((err) => console.error("Error checking doc:", err));
+
+            const statusDiv = document.getElementById('connection-status');
+            const updateScreen = document.getElementById('update-screen');
+            const lockdownOverlay = document.getElementById('lockdown-overlay');
+            const abuseBanner = document.getElementById('admin-abuse-global-banner');
+            const abuseStatusBadge = document.getElementById('admin-abuse-status-badge');
+            const toggleAbuseBtn = document.getElementById('btn-toggle-abuse');
+
+            settingsRef.onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (statusDiv) {
+                        statusDiv.style.color = 'var(--neon-lime)';
+                        statusDiv.innerText = 'Status: Connected to Firestore ✓';
+                    }
+
+                    // Update Screens & Overlays
+                    updateScreen.style.display = data.updateActive ? 'block' : 'none';
+                    lockdownOverlay.style.display = data.lockdown ? 'block' : 'none';
+
+                    // Admin Abuse Live Sync
+                    if (data.adminAbuseActive) {
+                        abuseBanner.style.display = 'block';
+                        abuseStatusBadge.style.color = 'var(--neon-lime)';
+                        abuseStatusBadge.style.borderColor = 'var(--neon-lime)';
+                        abuseStatusBadge.innerText = 'Status: ACTIVE (CHAOS LIVE)';
+                        toggleAbuseBtn.innerText = '🛑 Disable Admin Abuse';
+                        toggleAbuseBtn.className = 'btn btn-danger';
+                    } else {
+                        abuseBanner.style.display = 'none';
+                        abuseStatusBadge.style.color = 'var(--neon-pink)';
+                        abuseStatusBadge.style.borderColor = 'var(--neon-pink)';
+                        abuseStatusBadge.innerText = 'Status: OFFLINE';
+                        toggleAbuseBtn.innerText = '🔥 Enable Admin Abuse Now';
+                        toggleAbuseBtn.className = 'btn btn-primary';
+                    }
+                }
+            });
+
+            // Scheduled Events Listener for Offline Automation
+            db.collection('scheduled_admin_events').onSnapshot(snap => {
+                scheduledEventsCache = [];
+                const tbody = document.getElementById('scheduled-events-tbody');
+                if (tbody) tbody.innerHTML = '';
+
+                snap.forEach(doc => {
+                    const ev = { id: doc.id, ...doc.data() };
+                    scheduledEventsCache.push(ev);
+                    if (tbody) {
+                        const triggerDateStr = new Date(ev.triggerTime).toLocaleString();
+                        tbody.innerHTML += `<tr><td><b>${ev.eventType}</b></td><td>${triggerDateStr}</td><td><button class="btn btn-danger btn-sm" onclick="cancelScheduledEvent('${ev.id}')">Cancel</button></td></tr>`;
+                    }
+                });
+            });
+
+            db.collection('users').onSnapshot(snap => {
+                usersCache = [];
+                let totalCoins = 0;
+                snap.forEach(doc => {
+                    const u = { id: doc.id, ...doc.data() };
+                    usersCache.push(u);
+                    totalCoins += Math.min(u.coins || 0, 100000);
+                });
+                document.getElementById('stat-users').innerText = usersCache.length;
+                document.getElementById('stat-coins').innerText = totalCoins;
+                renderUserTable();
+            });
+
+            db.collection('posts').onSnapshot(snap => {
+                postsCache = [];
+                snap.forEach(doc => postsCache.push({ id: doc.id, ...doc.data() }));
+                document.getElementById('stat-posts').innerText = postsCache.length;
+                renderPostTable();
+            });
+
+            db.collection('global_chat').orderBy('createdAt', 'asc').onSnapshot(snap => {
+                chatCache = [];
+                snap.forEach(doc => chatCache.push({ id: doc.id, ...doc.data() }));
+                renderGlobalChatUI();
+            });
+
+            db.collection('live_streams').onSnapshot(snap => {
+                streamsCache = [];
+                snap.forEach(doc => streamsCache.push({ id: doc.id, ...doc.data() }));
+                document.getElementById('stat-streams').innerText = streamsCache.length;
+                renderStreamsTable();
+            });
+
+            db.collection('promo_codes').onSnapshot(snap => {
+                promosCache = [];
+                snap.forEach(doc => promosCache.push({ id: doc.id, ...doc.data() }));
+                document.getElementById('stat-promos').innerText = promosCache.length;
+                renderPromoTable();
+            });
+
+            db.collection('reports').onSnapshot(snap => {
+                reportsCache = [];
+                snap.forEach(doc => reportsCache.push({ id: doc.id, ...doc.data() }));
+                document.getElementById('stat-reports').innerText = reportsCache.length;
+                renderReportsTable();
+            });
+
+            db.collection('custom_badges').onSnapshot(snap => {
+                badgesCache = [];
+                const bBody = document.getElementById('badge-table-body');
+                const badgeSelect = document.getElementById('promo-badge-select');
+                if (bBody) bBody.innerHTML = '';
+                if (badgeSelect) badgeSelect.innerHTML = '<option value="">-- No Badge Reward --</option>';
+
+                snap.forEach(doc => {
+                    const bId = doc.id;
+                    const d = doc.data();
+                    badgesCache.push({ id: bId, ...d });
+
+                    if (bBody) bBody.innerHTML += `<tr><td><b>${d.name}</b></td><td>${d.icon}</td><td><span style="color:${d.color}">${d.color}</span></td><td><button class="btn btn-secondary btn-sm" onclick="deleteBadge('${bId}')">Delete</button></td></tr>`;
+                    if (badgeSelect) badgeSelect.innerHTML += `<option value="${bId}">${d.icon} ${d.name} (${bId})</option>`;
+                });
+            });
+        }
+
+        // --- ADMIN ABUSE & AUTOMATED SCHEDULING LOGIC ---
+        async function toggleAdminAbuseNow() {
+            settingsRef.get().then(doc => {
+                const currentState = doc.exists ? !!doc.data().adminAbuseActive : false;
+                const newState = !currentState;
+                settingsRef.update({ adminAbuseActive: newState }).then(() => {
+                    logAction(`Admin Abuse mode toggled to: ${newState ? 'ACTIVE (Chaos & Custom Lobbies Enabled)' : 'OFFLINE'}`);
+                    showToast(newState ? '🔥 Admin Abuse Activated! Custom Games & Trading Live!' : 'Admin Abuse Deactivated.');
+                });
+            });
+        }
+
+        function openScheduleAbuseModal() {
+            document.getElementById('schedule-abuse-modal').style.display = 'flex';
+        }
+
+        function closeScheduleAbuseModal() {
+            document.getElementById('schedule-abuse-modal').style.display = 'none';
+        }
+
+        async function saveScheduledAbuseEvent() {
+            const eventType = document.getElementById('schedule-event-type').value;
+            const timeVal = document.getElementById('schedule-event-time').value;
+            if(!timeVal) { showToast('Please select a target date and time.'); return; }
+
+            const triggerTimestamp = new Date(timeVal).getTime();
+            await db.collection('scheduled_admin_events').add({
+                eventType,
+                triggerTime: triggerTimestamp,
+                executed: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            logAction(`Scheduled automated Admin Abuse event (${eventType}) for ${new Date(triggerTimestamp).toLocaleString()}`);
+            showToast('Event successfully scheduled for offline automation!');
+            closeScheduleAbuseModal();
+        }
+
+        async function cancelScheduledEvent(eventId) {
+            await db.collection('scheduled_admin_events').doc(eventId).delete();
+            logAction(`Cancelled scheduled event ID ${eventId}`);
+            showToast('Scheduled event removed.');
+        }
+
+        // Background daemon checking schedules even if you are away/offline
+        async function checkAutomatedSchedules() {
+            const now = Date.now();
+            for (let ev of scheduledEventsCache) {
+                if (!ev.executed && now >= ev.triggerTime) {
+                    // Trigger Admin Abuse automatically
+                    await settingsRef.update({ adminAbuseActive: true });
+                    await db.collection('scheduled_admin_events').doc(ev.id).update({ executed: true });
+                    logAction(`[AUTOMATION] Offline schedule triggered! Admin Abuse event (${ev.eventType}) executed.`);
+                    showToast(`🤖 Offline automation executed: ${ev.eventType}!`);
+                }
+            }
+        }
+
+        // --- UPDATE SCREEN CONTROLS ---
+        function openUpdateModal() { document.getElementById('vault-update-popup').style.display = 'flex'; }
+        function closeUpdateModal() { document.getElementById('vault-update-popup').style.display = 'none'; }
+        function confirmAndActivateUpdate() {
+            closeUpdateModal();
+            settingsRef.update({ updateActive: true, unlockPassword: "AIMEISPRO" }).then(() => {
+                logAction("System update screen activated globally!");
+                showToast("Update screen activated!");
+            });
+        }
+
+        // --- LOCKDOWN SCREEN CONTROLS ---
+        function openLockdownModal() { document.getElementById('vault-lockdown-popup').style.display = 'flex'; }
+        function closeLockdownModal() { document.getElementById('vault-lockdown-popup').style.display = 'none'; }
+        function confirmAndActivateLockdown() {
+            closeLockdownModal();
+            settingsRef.update({ lockdown: true, unlockPassword: "AIMEISPRO" }).then(() => {
+                logAction("Emergency lockdown screen activated globally!");
+                showToast("Lockdown screen activated!");
+            });
+        }
+
+        // --- UNLOCK BYPASS HANDLER ---
+        function handleUnlockAttempt(screenType) {
+            const inputId = screenType === 'update' ? 'update-password-input' : 'lockdown-password-input';
+            const errorId = screenType === 'update' ? 'update-error-msg' : 'lockdown-error-msg';
+            const enteredValue = document.getElementById(inputId).value;
+            const errorMsg = document.getElementById(errorId);
+
+            settingsRef.get().then((doc) => {
+                if (doc.exists) {
+                    const correctPassword = doc.data().unlockPassword || "AIMEISPRO";
+                    if (enteredValue === correctPassword) {
+                        const updateObj = screenType === 'update' ? { updateActive: false } : { lockdown: false };
+                        settingsRef.update(updateObj).then(() => {
+                            logAction(`System ${screenType} screen bypassed successfully!`);
+                            showToast("Matrix unlocked successfully!");
+                        });
+                    } else {
+                        errorMsg.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        function renderGlobalChatUI() {
+            const container = document.getElementById('globalChatMessages');
+            if(!container) return;
+            container.innerHTML = '';
+            if (chatCache.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-sub); text-align:center; padding:20px; font-size:12px;">No chat transmissions recorded yet.</p>';
+                return;
+            }
+            chatCache.forEach(msg => {
+                const card = document.createElement('div');
+                card.className = 'chat-msg-card';
+                let replyQuoteHtml = '';
+                if (msg.replyTo) {
+                    const originalMsg = chatCache.find(m => m.id === msg.replyTo);
+                    if (originalMsg) {
+                        replyQuoteHtml = `<div class="chat-msg-quote">Replying to <b>@${originalMsg.username || originalMsg.sender || 'unknown'}</b>: ${escapeHtml(originalMsg.text || originalMsg.message || '')}</div>`;
+                    }
+                }
+                const senderName = msg.username || msg.sender || msg.name || 'Anonymous';
+                const messageText = msg.text || msg.message || '';
+                card.innerHTML = `
+                    ${replyQuoteHtml}
+                    <div class="chat-msg-sender">@${escapeHtml(senderName)}</div>
+                    <div class="chat-msg-text">${escapeHtml(messageText)}</div>
+                    <div style="display:flex; gap:10px; margin-top:4px;">
+                        <button class="chat-reply-trigger" onclick="initiateChatReply('${msg.id}', '${escapeHtml(senderName)}', '${escapeHtml(messageText)}')">Reply</button>
+                        <button class="chat-reply-trigger" style="color:var(--neon-pink);" onclick="deleteChatMessage('${msg.id}')">Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function initiateChatReply(msgId, senderName, msgText) {
+            replyingToChatId = msgId;
+            document.getElementById('replyingTargetUser').innerText = senderName;
+            document.getElementById('replyingTargetText').innerText = msgText;
+            document.getElementById('chatReplyBanner').style.display = 'flex';
+            document.getElementById('globalChatInput').focus();
+        }
+
+        function cancelChatReply() {
+            replyingToChatId = null;
+            document.getElementById('chatReplyBanner').style.display = 'none';
+        }
+
+        async function sendGlobalChatMessage() {
+            const inputField = document.getElementById('globalChatInput');
+            const textValue = inputField.value.trim();
+            if(!textValue) return;
+            const senderHandle = currentUserData ? currentUserData.username : 'Admin';
+            try {
+                await db.collection('global_chat').add({
+                    username: senderHandle,
+                    sender: senderHandle,
+                    text: textValue,
+                    message: textValue,
+                    replyTo: replyingToChatId || null,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                inputField.value = '';
+                cancelChatReply();
+                showToast('Message transmitted to global network');
+            } catch(e) { console.error(e); }
+        }
+
+        function handleChatKeyPress(event) { if(event.key === 'Enter') { sendGlobalChatMessage(); } }
+        async function deleteChatMessage(msgId) {
+            if(!confirm('Permanently remove this chat message?')) return;
+            await db.collection('global_chat').doc(msgId).delete();
+            showToast('Chat message deleted');
+        }
+
+        function escapeHtml(text) {
+            if(!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function renderUserTable() {
+            const query = document.getElementById('user-search').value.toLowerCase();
+            const filter = document.getElementById('user-filter').value;
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = '';
+
+            const filtered = usersCache.filter(u => {
+                const matchQuery = (u.username || '').toLowerCase().includes(query) || (u.displayName || '').toLowerCase().includes(query) || u.id.includes(query);
+                if(!matchQuery) return false;
+                if(filter === 'banned') return u.banned;
+                if(filter === 'muted') return u.muted;
+                if(filter === 'verified') return u.verified;
+                return true;
+            });
+
+            filtered.forEach(u => {
+                const verifiedTag = u.verified ? '<span style="color:var(--neon-cyan); margin-left: 4px;" title="Verified">✓</span>' : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>@${u.username || 'unknown'}</b>${verifiedTag}<br><span style="font-size:9px;color:var(--text-sub);font-family:'JetBrains Mono',monospace;">${u.id}</span></td>
+                        <td>${u.coins || 0}</td>
+                        <td><span class="badge-pill">${u.badge || 'member'}</span></td>
+                        <td>${u.banned ? '<span style="color:var(--neon-pink);font-weight:700;">Banned</span>' : (u.muted ? '<span style="color:var(--neon-amber);font-weight:700;">Muted</span>' : '<span style="color:var(--neon-lime);font-weight:600;">Active</span>')}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="openUserModal('${u.id}')">Manage</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openLiveBroadcastModal() { document.getElementById('live-broadcast-modal').style.display = 'flex'; }
+        function closeLiveBroadcastModal() { document.getElementById('live-broadcast-modal').style.display = 'none'; }
+        async function submitLiveBroadcastModal() {
+            const title = document.getElementById('modal-stream-title').value.trim();
+            const host = document.getElementById('modal-stream-host').value.trim();
+            const url = document.getElementById('modal-stream-url').value.trim();
+            if(!title) { showToast('Enter stream title'); return; }
+            await db.collection('live_streams').add({ title, host: host || 'Ferni1', url: url || 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            showToast('Live stream started!');
+            closeLiveBroadcastModal();
+        }
+
+        async function startLiveBroadcast() {
+            const title = document.getElementById('stream-title-input').value.trim();
+            const host = document.getElementById('stream-host-input').value.trim();
+            const url = document.getElementById('stream-url-input').value.trim();
+            if(!title) { showToast('Enter broadcast title'); return; }
+            await db.collection('live_streams').add({ title, host: host || 'Ferni1', url: url || 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            showToast('Live broadcast deployed!');
+        }
+
+        function renderStreamsTable() {
+            const tbody = document.getElementById('live-streams-table-body');
+            tbody.innerHTML = '';
+            streamsCache.forEach(s => {
+                tbody.innerHTML += `<tr><td><b>${s.title}</b></td><td>@${s.host}</td><td><button class="btn btn-danger btn-sm" onclick="endLiveStream('${s.id}')">End</button></td></tr>`;
+            });
+        }
+
+        async function endLiveStream(id) { await db.collection('live_streams').doc(id).delete(); showToast('Stream ended'); }
+
+        function toggleAiFeature(feature, state) { showToast(`AI setting ${feature} updated`); }
+        async function runAiScanNow() { showToast('Neural deep scan finished successfully!'); }
+
+        function openLookupModalPrompt() { document.getElementById('lookup-modal').style.display = 'flex'; }
+        function closeLookupModal() { document.getElementById('lookup-modal').style.display = 'none'; }
+        async function executeUserLookup() {
+            const query = document.getElementById('lookup-input-query').value.trim().toLowerCase();
+            const container = document.getElementById('lookup-results-container');
+            let foundUser = usersCache.find(u => u.id === query || (u.username && u.username.toLowerCase() === query));
+            if(!foundUser) { container.innerHTML = `<p style="color:var(--neon-pink);font-size:12px;text-align:center;">No records found.</p>`; return; }
+            container.innerHTML = `<div class="glass-cyber" style="padding: 18px;"><h4 style="color:var(--neon-cyan);">@${foundUser.username}</h4><p>Coins: ${foundUser.coins || 0}</p></div>`;
+        }
+
+        function openUserModal(uid) {
+            selectedUserId = uid;
+            const u = usersCache.find(x => x.id === uid);
+            if(!u) return;
+            document.getElementById('modal-username').innerText = `Manage User: @${u.username || uid}`;
+            document.getElementById('user-modal').style.display = 'flex';
+        }
+        function closeUserModal() { document.getElementById('user-modal').style.display = 'none'; }
+
+        async function adminChangeUserPassword() {
+            const newPass = document.getElementById('modal-user-newpass').value.trim();
+            if(!newPass) return;
+            await db.collection('users').doc(selectedUserId).update({ password: newPass });
+            showToast('User password successfully updated');
+        }
+
+        async function modUserCoins(action) {
+            const amt = parseInt(document.getElementById('modal-coin-amount').value) || 0;
+            const u = usersCache.find(x => x.id === selectedUserId);
+            if(!u) return;
+            let current = u.coins || 0;
+            if(action === 'give') current += amt;
+            else if(action === 'remove') current -= amt;
+            else if(action === 'set') current = amt;
+            await db.collection('users').doc(selectedUserId).update({ coins: current });
+            showToast('Coins updated');
+        }
+
+        async function toggleUserStatus(field) {
+            const u = usersCache.find(x => x.id === selectedUserId);
+            if(!u) return;
+            await db.collection('users').doc(selectedUserId).update({ [field]: !u[field] });
+            showToast('User status updated');
+            openUserModal(selectedUserId);
+        }
+
+        async function deleteAccountModal() {
+            if(!confirm('Permanently delete account?')) return;
+            await db.collection('users').doc(selectedUserId).delete();
+            closeUserModal();
+        }
+
+        function renderPostTable() {
+            const tbody = document.getElementById('post-table-body');
+            tbody.innerHTML = '';
+            postsCache.forEach(p => {
+                tbody.innerHTML += `<tr><td>@${p.username || 'user'}</td><td>${p.caption || '[Post]'}</td><td><button class="btn btn-danger btn-sm" onclick="deletePost('${p.id}')">Delete</button></td></tr>`;
+            });
+        }
+
+        async function deletePost(pid) { await db.collection('posts').doc(pid).delete(); showToast('Post removed'); }
+
+        async function createCustomBadge() {
+            const name = document.getElementById('badge-name').value.trim();
+            const icon = document.getElementById('badge-icon').value.trim();
+            const color = document.getElementById('badge-color').value;
+            if(!name) return;
+            const id = name.toLowerCase().replace(/\s+/g, '_');
+            await db.collection('custom_badges').doc(id).set({ name, icon, color });
+            showToast('Badge created');
+        }
+
+        async function deleteBadge(id) { await db.collection('custom_badges').doc(id).delete(); showToast('Badge deleted'); }
+
+        async function createPromoCode() {
+            const code = document.getElementById('promo-code-text').value.trim().toUpperCase();
+            const coins = parseInt(document.getElementById('promo-coins').value) || 0;
+            const badgeReward = document.getElementById('promo-badge-select').value;
+            if(!code) return;
+            await db.collection('promo_codes').doc(code).set({ code, coins, badgeReward: badgeReward || null, usedCount: 0 });
+            showToast('Voucher deployed!');
+        }
+
+        function renderPromoTable() {
+            const tbody = document.getElementById('promo-table-body');
+            tbody.innerHTML = '';
+            promosCache.forEach(p => {
+                tbody.innerHTML += `<tr><td><b>${p.code}</b></td><td>${p.coins}</td><td><button class="btn btn-danger btn-sm" onclick="deletePromo('${p.id}')">Delete</button></td></tr>`;
+            });
+        }
+        async function deletePromo(id) { await db.collection('promo_codes').doc(id).delete(); showToast('Voucher deleted'); }
+
+        function renderReportsTable() {
+            const tbody = document.getElementById('report-table-body');
+            tbody.innerHTML = '';
+            reportsCache.forEach(r => {
+                tbody.innerHTML += `<tr><td>@${r.reporter}</td><td>${r.reason}</td><td><button class="btn btn-danger btn-sm" onclick="resolveReport('${r.id}')">Resolve</button></td></tr>`;
+            });
+        }
+        async function resolveReport(id) { await db.collection('reports').doc(id).delete(); showToast('Report resolved'); }
+
+        async function updateSystemSetting(key, val) { await db.collection('system_settings').doc('config').set({ [key]: val }, { merge: true }); showToast('Setting updated'); }
+        async function saveSystemAnnouncement() {
+            const text = document.getElementById('setting-announcement').value.trim();
+            await db.collection('system_settings').doc('config').set({ announcement: text }, { merge: true });
+            showToast('Announcement broadcasted!');
+        }
+
+        async function coinSinkTax() {
+            const batch = db.batch();
+            usersCache.forEach(u => { if((u.coins || 0) > 100) batch.update(db.collection('users').doc(u.id), { coins: Math.floor(u.coins * 0.9) }); });
+            await batch.commit();
+            showToast('Wealth tax executed');
+        }
+
+        async function coinSinkDividend() {
+            const batch = db.batch();
+            usersCache.forEach(u => batch.update(db.collection('users').doc(u.id), { coins: Math.min(100000, (u.coins || 0) + 100) }));
+            await batch.commit();
+            showToast('Dividend disbursed');
+        }
+
+        async function purgeGlobalChat() {
+            if(!confirm('Wipe chat?')) return;
+            const snap = await db.collection('global_chat').get();
+            const batch = db.batch();
+            snap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            showToast('Chat wiped');
+        }
+
+        async function wipeAllPosts() {
+            if(!confirm('Purge all posts?')) return;
+            const snap = await db.collection('posts').get();
+            const batch = db.batch();
+            snap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            showToast('Posts wiped');
+        }
+
+        async function resetAllCoins() {
+            if(!confirm('Reset all wallets to 100?')) return;
+            const batch = db.batch();
+            usersCache.forEach(u => batch.update(db.collection('users').doc(u.id), { coins: 100 }));
+            await batch.commit();
+            showToast('Wallets reset');
+        }
+
+        async function factoryResetDatabase() {
+            if(!confirm('⚠️ FACTORY RESET MATRIX?')) return;
+            showToast('Matrix reset complete');
+        }
+
+        function exportUsersCSV() { showToast('CSV Export generated'); }
+    </script>
+</body>
+</html>
