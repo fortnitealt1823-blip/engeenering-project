@@ -1,1 +1,59 @@
-hi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My iPad Built Website</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: inline-block;
+            max-width: 500px;
+        }
+        h1 { color: #0288d1; }
+        .status { color: #2e7d32; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Hello World! 🚀</h1>
+        <p>This website was deployed straight from an iPad using GitHub Actions.</p>
+        <p class="status">Firebase Status: Fully Connected</p>
+    </div>
+
+    <!-- Firebase Connection Engine -->
+    <script type="module">
+        // Import the functions you need from the CDN SDKs
+        import { initializeApp } from "https://gstatic.com";
+        import { getAnalytics } from "https://gstatic.com";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuRNtsY8jPG9JoBeG8XEzZZeL0yzkb9TU",
+            authDomain: "engeenering-project.firebaseapp.com",
+            projectId: "engeenering-project",
+            storageBucket: "engeenering-project.firebasestorage.app",
+            messagingSenderId: "1023552675787",
+            appId: "1:1023552675787:web:df2378aa52848b6f68e04e",
+            measurementId: "G-S0JZ0YZE8K"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        
+        console.log("Firebase initialized successfully!");
+    </script>
+</body>
+</html>
